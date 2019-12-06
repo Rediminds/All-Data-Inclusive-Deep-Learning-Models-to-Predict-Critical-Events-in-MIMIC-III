@@ -1,0 +1,25 @@
+# Big Query to extract Chartevents Data for HADM_ID with single ICUSTAY_ID and ICU LOS > 24 hrs 
+# Big Query interface was used to export data in smaller chunks and save it on Google Cloud Storage
+# The exported chunks were transfered from Cloud Storage to the Compute Engine (VM) manually using data transfer commands in GCP documentation
+
+with single_icustay as (
+select CONCAT(cast(HADM_ID as STRING),'_',cast(ICUSTAY_ID as STRING)) from `mimicproject.MIMIC3_V1_5.ICUSTAYS`
+where HADM_ID in (select HADM_ID from `mimicproject.MIMIC3_V1_5.ICUSTAYS` 
+group by HADM_ID
+having count(Distinct ICUSTAY_ID) = 1)
+)
+
+Select ch.*,icu.INTIME as ICU_INTIME,ad.HOSPITAL_EXPIRE_FLAG, DATETIME_DIFF(ch.STORETIME , icu.INTIME, MINUTE) as icu_tdelta, icu.LOS 
+from  `mimicproject.MIMIC3_V1_5.CHARTEVENTS`  as ch
+left join `mimicproject.MIMIC3_V1_5.ICUSTAYS` as icu
+on ch.ICUSTAY_ID = icu.ICUSTAY_ID
+left join `mimicproject.MIMIC3_V1_5.ADMISSIONS` as ad
+on ch.HADM_ID = ad.HADM_ID 
+
+where DATETIME_DIFF(ch.STORETIME , icu.INTIME, MINUTE) <= 1440
+and DATETIME_DIFF(ch.STORETIME , icu.INTIME, MINUTE) >= 0
+and CONCAT(cast(ch.HADM_ID as STRING),'_',cast(ch.ICUSTAY_ID as STRING)) in 
+(
+select * from single_icustay
+)
+and icu.LOS >1
