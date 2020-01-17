@@ -2,7 +2,7 @@ trainingInput:
   hyperparameters:
     goal: MINIMIZE
     maxTrials: 60
-    maxParallelTrials: 2
+    maxParallelTrials: 1
     hyperparameterMetricTag: epoch_val_loss
     enableTrialEarlyStopping: True
     params:
